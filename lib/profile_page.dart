@@ -1,17 +1,21 @@
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 import 'package:health/widget/custom_button.dart';
 import 'package:health/widget/custom_textfield.dart';
 
 class Profilepage extends StatefulWidget {
-  final String userId;  // Add userId as a parameter
-  final String email;    // Add email as a parameter
-  final String name;     // Add name as a parameter
+  final String userId; // User ID
+  final String email; // Email
+  final String name; // Name
+  final String token; // Token for making authorized requests
 
   const Profilepage({
     super.key,
-    required this.userId,   // Mark as required
-    required this.email,    // Mark as required
-    required this.name,     // Mark as required
+    required this.userId,
+    required this.email,
+    required this.name,
+    required this.token, // Pass the token
   });
 
   @override
@@ -19,7 +23,63 @@ class Profilepage extends StatefulWidget {
 }
 
 class _ProfilepageState extends State<Profilepage> {
-  final control = TextEditingController();
+  final TextEditingController _heightController = TextEditingController();
+  final TextEditingController _weightController = TextEditingController();
+  final TextEditingController _bloodTypeController = TextEditingController();
+  final TextEditingController _allergiesController = TextEditingController();
+  final TextEditingController _medicalConditionController = TextEditingController();
+
+  bool _isLoading = false;
+
+  // API call to save health data
+  Future<void> _saveHealthData() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final response = await http.post(
+        Uri.parse('http://127.0.0.1:8000/health_data/'),
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer ${widget.token}", // Ensure valid token is passed
+        },
+        body: jsonEncode({
+          "height": double.parse(_heightController.text),
+          "weight": double.parse(_weightController.text),
+          "blood_type": _bloodTypeController.text,
+          "allergies": _allergiesController.text.isEmpty
+              ? []
+              : _allergiesController.text.split(','),
+          "medical_conditions": _medicalConditionController.text.isEmpty
+              ? []
+              : _medicalConditionController.text.split(','),
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Health data saved successfully')),
+        );
+      } else if (response.statusCode == 401) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Unauthorized: Invalid token')),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to save health data: ${response.body}')),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: $e')),
+      );
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -41,7 +101,7 @@ class _ProfilepageState extends State<Profilepage> {
             ),
             const SizedBox(height: 50),
 
-            // Display user information passed from the login page
+            // Display user information
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -66,12 +126,12 @@ class _ProfilepageState extends State<Profilepage> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        widget.name,  // Display the passed name
+                        widget.name,
                         style: const TextStyle(
                             fontSize: 24, fontWeight: FontWeight.w600),
                       ),
                       Text(
-                        widget.email,  // Display the passed email
+                        widget.email,
                         style: const TextStyle(
                             fontSize: 16, fontWeight: FontWeight.w400),
                       ),
@@ -82,7 +142,7 @@ class _ProfilepageState extends State<Profilepage> {
             ),
             const SizedBox(height: 50),
 
-            // Text fields for profile information
+            // Input fields
             Padding(
               padding: EdgeInsets.only(
                 right: MediaQuery.of(context).size.width * 0.5,
@@ -91,96 +151,65 @@ class _ProfilepageState extends State<Profilepage> {
                 CustomTextfield(
                   hintText: "Height",
                   isHasSuffixIcon: false,
-                  keyboardType: TextInputType.none,
-                  control: control,
+                  keyboardType: TextInputType.number,
+                  control: _heightController,
                   isHasPrefixIcon: false,
                 ),
                 const SizedBox(height: 15),
                 CustomTextfield(
                   hintText: "Weight",
                   isHasSuffixIcon: false,
-                  keyboardType: TextInputType.none,
-                  control: control,
+                  keyboardType: TextInputType.number,
+                  control: _weightController,
                   isHasPrefixIcon: false,
                 ),
                 const SizedBox(height: 15),
                 CustomTextfield(
                   hintText: "Blood type",
                   isHasSuffixIcon: false,
-                  keyboardType: TextInputType.none,
-                  control: control,
+                  keyboardType: TextInputType.text,
+                  control: _bloodTypeController,
                   isHasPrefixIcon: false,
                 ),
                 const SizedBox(height: 15),
                 CustomTextfield(
-                  hintText: "Allergies",
+                  hintText: "Allergies (comma separated)",
                   isHasSuffixIcon: false,
-                  keyboardType: TextInputType.none,
-                  control: control,
+                  keyboardType: TextInputType.text,
+                  control: _allergiesController,
                   isHasPrefixIcon: false,
                 ),
                 const SizedBox(height: 15),
                 CustomTextfield(
-                  hintText: "Medical condition",
+                  hintText: "Medical conditions (comma separated)",
                   isHasSuffixIcon: false,
-                  keyboardType: TextInputType.none,
-                  control: control,
+                  keyboardType: TextInputType.text,
+                  control: _medicalConditionController,
                   isHasPrefixIcon: false,
                 ),
               ]),
             ),
             const SizedBox(height: 50),
 
-            // Sample Table for displaying data
-            Table(
-              columnWidths: const <int, TableColumnWidth>{},
-              children: const [
-                TableRow(children: [
-                  Text(
-                    "Customer",
-                    style: TextStyle(
-                        color: Colors.black,
-                        fontWeight: FontWeight.w700,
-                        fontSize: 14),
+            // Save Button
+            _isLoading
+                ? const CircularProgressIndicator()
+                : GestureDetector(
+                    onTap: _saveHealthData,
+                    child: const CustomButton(
+                      widget: Center(
+                        child: Text(
+                          "Save Health Data",
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w400,
+                          ),
+                        ),
+                      ),
+                      color: Color(0xff156778),
+                    ),
                   ),
-                  Text(
-                    "Height",
-                    style: TextStyle(
-                        color: Colors.black,
-                        fontWeight: FontWeight.w700,
-                        fontSize: 14),
-                  ),
-                  Text(
-                    "Weight",
-                    style: TextStyle(
-                        color: Colors.black,
-                        fontWeight: FontWeight.w700,
-                        fontSize: 14),
-                  ),
-                  Text(
-                    "Blood type",
-                    style: TextStyle(
-                        color: Colors.black,
-                        fontWeight: FontWeight.w700,
-                        fontSize: 14),
-                  ),
-                  Text(
-                    "Allergies",
-                    style: TextStyle(
-                        color: Colors.black,
-                        fontWeight: FontWeight.w700,
-                        fontSize: 14),
-                  ),
-                  Text(
-                    "Medical condition",
-                    style: TextStyle(
-                        color: Colors.black,
-                        fontWeight: FontWeight.w700,
-                        fontSize: 14),
-                  ),
-                ])
-              ],
-            ),
           ],
         ),
       ),

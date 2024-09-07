@@ -34,61 +34,62 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   // Sign in with Google
-  Future<void> _handleGoogleSignIn() async {
-    try {
-      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
-      if (googleUser == null) {
-        // User cancelled the sign-in
-        return;
-      }
+Future<void> _handleGoogleSignIn() async {
+  try {
+    final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
+    if (googleUser == null) {
+      // User cancelled the sign-in
+      return;
+    }
 
-      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+    final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
 
-      // Get user details from Google
-      final String email = googleUser.email;
-      final String name = googleUser.displayName ?? '';
-      final String profilePicture = googleUser.photoUrl ?? '';
+    // Get user details from Google
+    final String email = googleUser.email;
+    final String name = googleUser.displayName ?? '';
+    final String profilePicture = googleUser.photoUrl ?? '';
 
-      // Send the user's email and additional details to FastAPI backend
-      final response = await http.post(
-        Uri.parse('http://127.0.0.1:8000/auth/google_login'),
-        headers: {"Content-Type": "application/json"},
-        body: jsonEncode({
-          "email": email,
-          "name": name,
-          "profile_picture": profilePicture
-        }),
-      );
+    // Send the user's email and additional details to FastAPI backend
+    final response = await http.post(
+      Uri.parse('http://127.0.0.1:8000/auth/google_login'),
+      headers: {"Content-Type": "application/json"},
+      body: jsonEncode({
+        "email": email,
+        "name": name,
+        "profile_picture": profilePicture
+      }),
+    );
 
-      if (response.statusCode == 200) {
-        final responseData = jsonDecode(response.body);
-        print('User ID: ${responseData['user_id']}');  // Handle user_id
+    if (response.statusCode == 200) {
+      final responseData = jsonDecode(response.body);
+      print('User ID: ${responseData['user_id']}');  // Handle user_id
+      print('Access Token: ${responseData['access_token']}');  // Handle access_token
 
-        // Navigate to profile page with optional user data
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => Profilepage(
-              userId: responseData['user_id'].toString(),  // Converting user_id to string if needed
-              email: email,
-              name: name,
-            ),
+      // Navigate to profile page with user data and token
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => Profilepage(
+            userId: responseData['user_id'].toString(),  // Converting user_id to string if needed
+            email: email,
+            name: name,
+            token: responseData['access_token'],  // Pass the token here
           ),
-        );
-      } else {
-        print('Failed to log in with Google: ${response.body}');
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Login failed: ${response.body}')),
-        );
-      }
-    } catch (e) {
-      print('Error signing in with Google: $e');
+        ),
+      );
+    } else {
+      print('Failed to log in with Google: ${response.body}');
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error signing in: $e')),
+        SnackBar(content: Text('Login failed: ${response.body}')),
       );
     }
+  } catch (e) {
+    print('Error signing in with Google: $e');
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Error signing in: $e')),
+    );
   }
-
+}
   // Existing Email and Password sign-in logic (not connected to backend)
   void _loginWithEmailPassword() {
     final email = _email.text;
@@ -103,7 +104,7 @@ class _LoginPageState extends State<LoginPage> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => const Profilepage(userId: '', email: '', name: '',),
+        builder: (context) => const Profilepage(userId: '', email: '', name: '', token: '',),
       ),
     );
   }
