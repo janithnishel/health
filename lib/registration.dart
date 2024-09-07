@@ -18,10 +18,10 @@ class _RegistrationState extends State<Registration> {
 
   //create the instance of text edit Controller
 
-  TextEditingController _name = TextEditingController();
-  TextEditingController _email = TextEditingController();
-  TextEditingController _pasword = TextEditingController();
-  TextEditingController _confirmPassword = TextEditingController();
+  final TextEditingController _name = TextEditingController();
+  final TextEditingController _email = TextEditingController();
+  final TextEditingController _pasword = TextEditingController();
+  final TextEditingController _confirmPassword = TextEditingController();
 
   //remove the garbage collection of text edit controller
 
@@ -142,7 +142,7 @@ class _RegistrationState extends State<Registration> {
                       isHasSuffixIcon: true,
                       prefixIcon: const Icon(
                         Icons.lock,
-                        color: const Color(0xff156778),
+                        color: Color(0xff156778),
                         size: 20,
                       ),
                       suffixIcon: GestureDetector(
